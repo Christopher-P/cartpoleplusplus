@@ -11,3 +11,6 @@ venv
 pybullet.so
 *hdf5
 *~
+
+# Ignore pycharm files
+.idea/*
