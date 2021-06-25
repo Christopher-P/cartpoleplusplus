@@ -35,8 +35,10 @@ for _ in range(opts.num_eval):
         else:
             action = env.action_space.sample()
         _state, reward, done, info = env.step(action)
+        print(_state)
         steps += 1
         total_reward += reward
+        time.sleep(1)
         if opts.max_episode_len is not None and steps > opts.max_episode_len:
             break
 print(total_reward)
