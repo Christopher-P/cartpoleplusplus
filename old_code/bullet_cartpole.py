@@ -47,7 +47,7 @@ def state_fields_of_pose_of(body_id):
 class BulletCartpole(gym.Env):
 
     def __init__(self, opts, discrete_actions):
-        self.gui = opts.gui
+        self.gui = 1 #opts.gui
         self.delay = opts.delay if self.gui else 0.0
 
         self.max_episode_len = opts.max_episode_len
@@ -155,7 +155,7 @@ class BulletCartpole(gym.Env):
     def _render(self, mode, close):
         pass
 
-    def _step(self, action):
+    def step(self, action):
         if self.done:
             # print >>sys.stderr, "calling step after done????"
             return np.copy(self.state), 0, True, {}
@@ -182,8 +182,8 @@ class BulletCartpole(gym.Env):
 
         # step simulation forward. at the end of each repeat we set part of the step's
         # state by capture the cart & pole state in some form.
-        for r in xrange(self.repeats):
-            for _ in xrange(self.steps_per_repeat):
+        for r in range(self.repeats):
+            for _ in range(self.steps_per_repeat):
                 p.stepSimulation()
                 p.applyExternalForce(self.cart, -1, (fx,fy,0), (0,0,0), p.WORLD_FRAME)
                 if self.delay > 0:
@@ -259,7 +259,7 @@ class BulletCartpole(gym.Env):
             self.state[repeat][0] = state_fields_of_pose_of(self.cart)
             self.state[repeat][1] = state_fields_of_pose_of(self.pole)
 
-    def _reset(self):
+    def reset(self):
         # reset state
         self.steps = 0
         self.done = False
@@ -267,19 +267,19 @@ class BulletCartpole(gym.Env):
         # reset pole on cart in starting poses
         p.resetBasePositionAndOrientation(self.cart, (0,0,0.08), (0,0,0,1))
         p.resetBasePositionAndOrientation(self.pole, (0,0,0.35), (0,0,0,1))
-        for _ in xrange(100): p.stepSimulation()
+        for _ in range(100): p.stepSimulation()
 
         # give a fixed force push in a random direction to get things going...
         theta = (np.random.random() * 2 * np.pi) if self.random_theta else 0.0
         fx, fy = self.initial_force * np.cos(theta), self.initial_force * np.sin(theta)
-        for _ in xrange(self.initial_force_steps):
+        for _ in range(self.initial_force_steps):
             p.stepSimulation()
             p.applyExternalForce(self.cart, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
             if self.delay > 0:
                 time.sleep(self.delay)
 
         # bootstrap state by running for all repeats
-        for i in xrange(self.repeats):
+        for i in range(self.repeats):
             self.set_state_element_for_repeat(i)
 
         # reset event log (if applicable) and add entry with only state
