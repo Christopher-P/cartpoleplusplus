@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import argparse
-import bullet_cartpole
 import random
 import time
+
+from cartpoleplusplus import CartPole3D
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--actions', type=str, default='0,1,2,3,4',
@@ -22,7 +23,7 @@ elif opts.action_type == 'continuous':
 else:
     raise Exception("Unknown action type [%s]" % opts.action_type)
 
-env = bullet_cartpole.BulletCartpole(opts=opts, discrete_actions=discrete_actions)
+env = CartPole3D(opts=opts, discrete_actions=discrete_actions)
 
 for _ in range(opts.num_eval):
     env.reset()
