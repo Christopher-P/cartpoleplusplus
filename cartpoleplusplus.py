@@ -11,46 +11,44 @@ import time
 np.set_printoptions(precision=3, suppress=True, linewidth=10000)
 
 
-def add_opts(parser):
-    parser.add_argument('--gui', action='store_true')
-    parser.add_argument('--delay', type=float, default=0.0)
-    parser.add_argument('--action-force', type=float, default=50.0,
-                        help="magnitude of action force applied per step")
-    parser.add_argument('--initial-force', type=float, default=55.0,
-                        help="magnitude of initial push, in random direction")
-    parser.add_argument('--no-random-theta', action='store_true')
-    parser.add_argument('--action-repeats', type=int, default=2,
-                        help="number of action repeats")
-    parser.add_argument('--steps-per-repeat', type=int, default=5,
-                        help="number of sim steps per repeat")
-    parser.add_argument('--num-cameras', type=int, default=1,
-                        help="how many camera points to render; 1 or 2")
-    parser.add_argument('--event-log-out', type=str, default=None,
-                        help="path to record event log.")
-    parser.add_argument('--max-episode-len', type=int, default=200,
-                        help="maximum episode len for cartpole")
-    parser.add_argument('--use-raw-pixels', action='store_true',
-                        help="use raw pixels as state instead of cart/pole poses")
-    parser.add_argument('--render-width', type=int, default=50,
-                        help="if --use-raw-pixels render with this width")
-    parser.add_argument('--render-height', type=int, default=50,
-                        help="if --use-raw-pixels render with this height")
-    parser.add_argument('--reward-calc', type=str, default='fixed',
-                        help="'fixed': 1 per step. 'angle': 2*max_angle - ox - oy. 'action': 1.5 - |action|. 'angle_action': both angle and action")
-
-
 def state_fields_of_pose_of(body_id):
     (x,y,z), (a,b,c,d) = p.getBasePositionAndOrientation(body_id)
     return np.array([x,y,z,a,b,c,d])
 
 
+# Return state in json format
+def state_to_json(name, body_id):
+    state = dict()
+    round_amount = 6
+    (x, y, z), (a, b, c, d) = p.getBasePositionAndOrientation(body_id)
+
+    state[name + '_x_position'] = round(x, round_amount)
+    state[name + '_y_position'] = round(y, round_amount)
+    state[name + '_z_position'] = round(z, round_amount)
+
+    state[name + '_x_quaternion'] = round(a, round_amount)
+    state[name + '_y_quaternion'] = round(b, round_amount)
+    state[name + '_z_quaternion'] = round(c, round_amount)
+    state[name + '_w_quaternion'] = round(d, round_amount)
+
+    return state
+
+
 class CartPole3D(gym.Env):
 
-    def __init__(self, opts, discrete_actions):
-        self.gui = 1
-        self.delay = opts.delay if self.gui else 0.0
+    def __init__(self, discrete_actions=True,
+                 gui=False, delay=0.0, max_episode_len=200, action_force=50.0, initial_action_force=55.0,
+                 no_random_theta=True, action_repeats=1, steps_per_repeat=5, num_cameras=1, render_width=50,
+                 render_height=50, use_raw_pixels=False, reward_calc='fixed', event_log_out=None):
+        
+        # Use json?
+        self.use_json = True
 
-        self.max_episode_len = opts.max_episode_len
+        # Handle Params here
+        self.gui = gui
+        self.delay = delay if self.gui else 0.0
+
+        self.max_episode_len = max_episode_len
 
         # threshold for pole position.
         # if absolute x or y moves outside this we finish episode
@@ -63,12 +61,12 @@ class CartPole3D(gym.Env):
         # force to apply per action simulation step.
         # in the discrete case this is the fixed force applied
         # in the continuous case each x/y is in range (-F, F)
-        self.action_force = opts.action_force
+        self.action_force = action_force
 
         # initial push force. this should be enough that taking no action will always
         # result in pole falling after initial_force_steps but not so much that you
         # can't recover. see also initial_force_steps.
-        self.initial_force = opts.initial_force
+        self.initial_force = initial_action_force
 
         # number of sim steps initial force is applied.
         # (see initial_force)
@@ -76,7 +74,7 @@ class CartPole3D(gym.Env):
 
         # whether we do initial push in a random direction
         # if false we always push with along x-axis (simplee problem, useful for debugging)
-        self.random_theta = not opts.no_random_theta
+        self.random_theta = not no_random_theta
 
         # true if action space is discrete; 5 values; no push, left, right, up & down
         # false if action space is continuous; fx, fy both (-action_force, action_force)
@@ -90,31 +88,31 @@ class CartPole3D(gym.Env):
             self.action_space = spaces.Box(-1.0, 1.0, shape=(1, 2))
 
         # open event log
-        if opts.event_log_out:
+        if event_log_out:
             import event_log
-            self.event_log = event_log.EventLog(opts.event_log_out, opts.use_raw_pixels)
+            self.event_log = event_log.EventLog(event_log_out, use_raw_pixels)
         else:
             self.event_log = None
 
         # how many time to repeat each action per step().
         # and how many sim steps to do per state capture
         # (total number of sim steps = action_repeats * steps_per_repeat
-        self.repeats = opts.action_repeats
-        self.steps_per_repeat = opts.steps_per_repeat
+        self.repeats = action_repeats
+        self.steps_per_repeat = steps_per_repeat
 
         # how many cameras to render?
         # if 1 just render from front
         # if 2 render from front and 90deg side
-        if opts.num_cameras not in [1, 2]:
+        if num_cameras not in [1, 2]:
             raise ValueError("--num-cameras must be 1 or 2")
-        self.num_cameras = opts.num_cameras
+        self.num_cameras = num_cameras
 
         # whether we are using raw pixels for state or just pole + cart pose
-        self.use_raw_pixels = opts.use_raw_pixels
+        self.use_raw_pixels = use_raw_pixels
 
         # in the use_raw_pixels is set we will be rendering
-        self.render_width = opts.render_width
-        self.render_height = opts.render_height
+        self.render_width = render_width
+        self.render_height = render_height
 
         # decide observation space
         if self.use_raw_pixels:
@@ -133,8 +131,8 @@ class CartPole3D(gym.Env):
         self.observation_space = gym.spaces.Box(-float_max, float_max, state_shape)
 
         # check reward type
-        assert opts.reward_calc in ['fixed', 'angle', 'action', 'angle_action']
-        self.reward_calc = opts.reward_calc
+        assert reward_calc in ['fixed', 'angle', 'action', 'angle_action']
+        self.reward_calc = reward_calc
 
         # no state until reset.
         self.state = np.empty(state_shape, dtype=np.float32)
@@ -158,7 +156,10 @@ class CartPole3D(gym.Env):
     def step(self, action):
         if self.done:
             # print >>sys.stderr, "calling step after done????"
-            return np.copy(self.state), 0, True, {}
+            if self.use_json:
+                return self.state, 0, True, {}
+            else:
+                return np.copy(self.state), 0, True, {}
 
         info = {}
 
@@ -225,7 +226,10 @@ class CartPole3D(gym.Env):
             self.event_log.add(self.state, action, reward)
 
         # return observation
-        return np.copy(self.state), reward, self.done, info
+        if self.use_json:
+            return self.state, reward, self.done, info
+        else:
+            return np.copy(self.state), reward, self.done, info
 
     def render_rgb(self, camera_idx):
         cameraPos = [(0.0, 0.75, 0.75), (0.75, 0.0, 0.75)][camera_idx]
@@ -256,8 +260,13 @@ class CartPole3D(gym.Env):
         else:
             # in low dim case state is (R, 2, 7)
             # R -> repeat, 2 -> 2 objects (cart & pole), 7 -> 7d pose
-            self.state[repeat][0] = state_fields_of_pose_of(self.cart)
-            self.state[repeat][1] = state_fields_of_pose_of(self.pole)
+            if self.use_json:
+                cart_json = state_to_json('cart', self.cart)
+                pole_json = state_to_json('pole', self.pole)
+                self.state = {**cart_json, **pole_json}
+            else:
+                self.state[repeat][0] = state_fields_of_pose_of(self.cart)
+                self.state[repeat][1] = state_fields_of_pose_of(self.pole)
 
     def reset(self):
         # reset state
@@ -288,4 +297,7 @@ class CartPole3D(gym.Env):
             self.event_log.add_just_state(self.state)
 
         # return this state
-        return np.copy(self.state)
+        if self.use_json:
+            return self.state
+        else:
+            return np.copy(self.state)
