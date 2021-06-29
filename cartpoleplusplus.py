@@ -13,7 +13,7 @@ np.set_printoptions(precision=3, suppress=True, linewidth=10000)
 
 def state_fields_of_pose_of(body_id):
     (x,y,z), (a,b,c,d) = p.getBasePositionAndOrientation(body_id)
-    return np.array([x,y,z,a,b,c,d])
+    return np.array([x, y, z, a, b, c, d])
 
 
 # Return state in json format
@@ -140,22 +140,14 @@ class CartPole3D(gym.Env):
         # setup bullet
         p.connect(p.GUI if self.gui else p.DIRECT)
         p.setGravity(0, 0, -9.81)
-        p.loadURDF("models/ground.urdf", 0,0,0, 0,0,0,1)
+        self.ground = p.loadURDF("models/ground.urdf", 0,0,0, 0,0,0,1)
         self.cart = p.loadURDF("models/cart.urdf", 0,0,0.08, 0,0,0,1)
         self.pole = p.loadURDF("models/pole.urdf", 0,0,0.35, 0,0,0,1)
 
-    def _configure(self, display=None):
-        pass
-
-    def _seed(self, seed=None):
-        pass
-
-    def _render(self, mode, close):
-        pass
+        return None
 
     def step(self, action):
         if self.done:
-            # print >>sys.stderr, "calling step after done????"
             if self.use_json:
                 return self.state, 0, True, {}
             else:
