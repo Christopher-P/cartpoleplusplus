@@ -5,7 +5,7 @@ import time
 
 import cartpoleplusplus
 
-env = cartpoleplusplus.CartPole3D()
+env = cartpoleplusplus.CartPole3D(gui=True)
 
 # Number of episodes
 nb_episodes = 200
