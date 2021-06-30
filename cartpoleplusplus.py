@@ -157,6 +157,9 @@ class CartPole3D(gym.Env):
         self.cart = p.loadURDF("models/cart.urdf")
         self.pole = p.loadURDF("models/pole.urdf")
 
+        # Set time step to normal cartpole
+        p.setTimeStep(50)
+
         return None
 
     def step(self, action):
