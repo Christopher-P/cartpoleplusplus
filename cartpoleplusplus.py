@@ -20,18 +20,31 @@ def state_fields_of_pose_of(body_id):
 def state_to_json(name, body_id):
     state = dict()
     round_amount = 6
+
+    # Position and orientation
     (x, y, z), (a, b, c, d) = p.getBasePositionAndOrientation(body_id)
+    state['x_position'] = round(x, round_amount)
+    state['y_position'] = round(y, round_amount)
+    state['z_position'] = round(z, round_amount)
+    state['x_quaternion'] = round(a, round_amount)
+    state['y_quaternion'] = round(b, round_amount)
+    state['z_quaternion'] = round(c, round_amount)
+    state['w_quaternion'] = round(d, round_amount)
 
-    state[name + '_x_position'] = round(x, round_amount)
-    state[name + '_y_position'] = round(y, round_amount)
-    state[name + '_z_position'] = round(z, round_amount)
+    # Velocity and angular velocity
+    (xv, yv, zv), (wx, wy, wz) = p.getBaseVelocity(body_id)
+    state['x_velocity'] = round(xv, round_amount)
+    state['y_velocity'] = round(yv, round_amount)
+    state['z_velocity'] = round(zv, round_amount)
 
-    state[name + '_x_quaternion'] = round(a, round_amount)
-    state[name + '_y_quaternion'] = round(b, round_amount)
-    state[name + '_z_quaternion'] = round(c, round_amount)
-    state[name + '_w_quaternion'] = round(d, round_amount)
+    state['x_angular_velocity'] = round(wx, round_amount)
+    state['y_angular_velocity'] = round(wy, round_amount)
+    state['z_angular_velocity'] = round(wz, round_amount)
 
-    return state
+    # Set name here
+    named_state = {name: state}
+
+    return named_state
 
 
 class CartPole3D(gym.Env):
@@ -119,14 +132,14 @@ class CartPole3D(gym.Env):
             # in high dimensional case each observation is an RGB images (H, W, 3)
             # we have R repeats and C cameras resulting in (H, W, 3, R, C)
             # final state fed to network is concatenated in depth => (H, W, 3*R*C)
-            state_shape = (self.render_height, self.render_width, 3,
-                                         self.num_cameras, self.repeats)
+            state_shape = (self.render_height, self.render_width, 3, self.num_cameras, self.repeats)
         else:
             # in the low dimensional case obs space for problem is (R, 2, 7)
             # R = number of repeats
             # 2 = two items; cart & pole
             # 7d tuple for pos + orientation pose
             state_shape = (self.repeats, 2, 7)
+
         float_max = np.finfo(np.float32).max
         self.observation_space = gym.spaces.Box(-float_max, float_max, state_shape)
 
@@ -140,9 +153,9 @@ class CartPole3D(gym.Env):
         # setup bullet
         p.connect(p.GUI if self.gui else p.DIRECT)
         p.setGravity(0, 0, -9.81)
-        self.ground = p.loadURDF("models/ground.urdf", 0,0,0, 0,0,0,1)
-        self.cart = p.loadURDF("models/cart.urdf", 0,0,0.08, 0,0,0,1)
-        self.pole = p.loadURDF("models/pole.urdf", 0,0,0.35, 0,0,0,1)
+        self.ground = p.loadURDF("models/ground.urdf")
+        self.cart = p.loadURDF("models/cart.urdf")
+        self.pole = p.loadURDF("models/pole.urdf")
 
         return None
 
@@ -178,7 +191,7 @@ class CartPole3D(gym.Env):
         for r in range(self.repeats):
             for _ in range(self.steps_per_repeat):
                 p.stepSimulation()
-                p.applyExternalForce(self.cart, -1, (fx,fy,0), (0,0,0), p.WORLD_FRAME)
+                p.applyExternalForce(self.cart, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
                 if self.delay > 0:
                     time.sleep(self.delay)
             self.set_state_element_for_repeat(r)
