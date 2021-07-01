@@ -50,8 +50,8 @@ def state_to_json(name, body_id):
 class CartPole3D(gym.Env):
 
     def __init__(self, discrete_actions=True,
-                 gui=False, delay=0.0, max_episode_len=200, action_force=50.0, initial_action_force=55.0,
-                 no_random_theta=True, action_repeats=1, steps_per_repeat=5, num_cameras=1, render_width=50,
+                 gui=False, delay=0.0, max_episode_len=200, action_force=500.0, initial_action_force=55.0,
+                 no_random_theta=True, action_repeats=1, steps_per_repeat=1, num_cameras=1, render_width=50,
                  render_height=50, use_raw_pixels=False, reward_calc='fixed', event_log_out=None):
         
         # Use json?
@@ -154,18 +154,19 @@ class CartPole3D(gym.Env):
         p.connect(p.GUI if self.gui else p.DIRECT)
         p.setGravity(0, 0, -9.81)
         self.ground = p.loadURDF("models/ground.urdf")
-        self.cart = p.loadURDF("models/cart.urdf")
-        self.pole = p.loadURDF("models/pole.urdf")
+        #self.cart = p.loadURDF("models/cart.urdf")
+        #self.pole = p.loadURDF("models/pole.urdf")
+        self.cartpole = p.loadURDF("models/cartpole.urdf")
 
         # Set time step to normal cartpole
-        p.setTimeStep(50)
+        # p.setTimeStep(50)
 
         return None
 
     def step(self, action):
         if self.done:
             if self.use_json:
-                return self.state, 0, True, {}
+                return self.state, 1, True, {}
             else:
                 return np.copy(self.state), 0, True, {}
 
@@ -194,7 +195,8 @@ class CartPole3D(gym.Env):
         for r in range(self.repeats):
             for _ in range(self.steps_per_repeat):
                 p.stepSimulation()
-                p.applyExternalForce(self.cart, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
+                #p.applyExternalForce(self.cart, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
+                p.applyExternalForce(self.cartpole, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
                 if self.delay > 0:
                     time.sleep(self.delay)
             self.set_state_element_for_repeat(r)
@@ -202,7 +204,8 @@ class CartPole3D(gym.Env):
 
         # Check for out of bounds by position or orientation on pole.
         # we (re)fetch pose explicitly rather than depending on fields in state.
-        (x, y, _z), orient = p.getBasePositionAndOrientation(self.pole)
+        #(x, y, _z), orient = p.getBasePositionAndOrientation(self.pole)
+        (x, y, _z), orient = p.getBasePositionAndOrientation(self.cartpole)
         ox, oy, _oz = p.getEulerFromQuaternion(orient) # roll / pitch / yaw
         if abs(x) > self.pos_threshold or abs(y) > self.pos_threshold:
             info['done_reason'] = 'out of position bounds'
@@ -245,9 +248,8 @@ class CartPole3D(gym.Env):
         cameraUp = (0, 0, 1)
         nearVal, farVal = 1, 20
         fov = 60
-        _w, _h, rgba, _depth, _objects = p.renderImage(self.render_width, self.render_height,
-                                                                                                     cameraPos, targetPos, cameraUp,
-                                                                                                     nearVal, farVal, fov)
+        _w, _h, rgba, _depth, _objects = p.renderImage(self.render_width, self.render_height, cameraPos, targetPos,
+                                                       cameraUp, nearVal, farVal, fov)
         # convert from 1d uint8 array to (H,W,3) hacky hardcode whitened float16 array.
         # TODO: for storage concerns could just store this as uint8 (which it is)
         # and normalise 0->1 + whiten later.
@@ -269,9 +271,11 @@ class CartPole3D(gym.Env):
             # in low dim case state is (R, 2, 7)
             # R -> repeat, 2 -> 2 objects (cart & pole), 7 -> 7d pose
             if self.use_json:
-                cart_json = state_to_json('cart', self.cart)
-                pole_json = state_to_json('pole', self.pole)
-                self.state = {**cart_json, **pole_json}
+                #cart_json = state_to_json('cart', self.cart)
+                #pole_json = state_to_json('pole', self.pole)
+                #self.state = {**cart_json, **pole_json}
+                cartpole_json = state_to_json('cartpole', self.cartpole)
+                self.state = {**cartpole_json}
             else:
                 self.state[repeat][0] = state_fields_of_pose_of(self.cart)
                 self.state[repeat][1] = state_fields_of_pose_of(self.pole)
@@ -282,8 +286,9 @@ class CartPole3D(gym.Env):
         self.done = False
 
         # reset pole on cart in starting poses
-        p.resetBasePositionAndOrientation(self.cart, (0,0,0.08), (0,0,0,1))
-        p.resetBasePositionAndOrientation(self.pole, (0,0,0.35), (0,0,0,1))
+        #p.resetBasePositionAndOrientation(self.cart, (0,0,0.08), (0,0,0,1))
+        #p.resetBasePositionAndOrientation(self.pole, (0,0,0.35), (0,0,0,1))
+        p.resetBasePositionAndOrientation(self.cartpole, (0, 0, 0.35), (0, 0, 0, 1))
         for _ in range(100): p.stepSimulation()
 
         # give a fixed force push in a random direction to get things going...
@@ -291,7 +296,8 @@ class CartPole3D(gym.Env):
         fx, fy = self.initial_force * np.cos(theta), self.initial_force * np.sin(theta)
         for _ in range(self.initial_force_steps):
             p.stepSimulation()
-            p.applyExternalForce(self.cart, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
+            #p.applyExternalForce(self.cart, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
+            p.applyExternalForce(self.cartpole, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
             if self.delay > 0:
                 time.sleep(self.delay)
 
