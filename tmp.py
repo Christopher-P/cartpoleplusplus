@@ -130,7 +130,7 @@ class CartPoleBulletEnv(gym.Env):
         randstate = self.np_random.uniform(low=-0.05, high=0.05, size=(6,))
         p.resetJointState(self.cartpole, 1, randstate[0], randstate[1])
         p.resetJointState(self.cartpole, 0, randstate[2], randstate[3])
-        p.resetJointState(self.cartpole, 2, randstate[4], randstate[5])
+        p.resetJointState(self.cartpole, 2, randstate[4]*5, randstate[5])
         # print("randstate=",randstate)
         self.state = p.getJointState(self.cartpole, 1)[0:2] + p.getJointState(self.cartpole, 0)[0:2]
         # print("self.state=", self.state)

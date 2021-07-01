@@ -79,7 +79,7 @@
 
   <joint name="cart_to_smol" type="continuous">
     <axis xyz="0 1 0"/>
-    <origin xyz="0.0 0.0 0"/>
+    <origin xyz="0.0 0.0 0.0"/>
     <parent link="cart"/>
     <child link="smol"/>
   </joint>
@@ -109,7 +109,7 @@
 
   <joint name="pole_to_smol" type="continuous">
     <axis xyz="1 0 0"/>
-    <origin xyz="0.0 0.0 0"/>
+    <origin xyz="0.0 0.0 0.0"/>
     <parent link="smol"/>
     <child link="pole"/>
   </joint>

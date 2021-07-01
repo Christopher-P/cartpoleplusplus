@@ -22,7 +22,7 @@ for _ in range(nb_episodes):
         print(_state)
         steps += 1
         total_reward += reward
-        time.sleep(1/60)
+        time.sleep(1/30)
 
 print(total_reward)
 
