@@ -42,6 +42,10 @@ class CartPoleBulletEnv(gym.Env):
         self.force_mag = 10
         self.timeStep = 0.02
 
+        # Object definitions
+        self.cartpole = None
+        self.state = None
+
         if self._discrete_actions:
             self.action_space = spaces.Discrete(5)
         else:
@@ -100,10 +104,10 @@ class CartPoleBulletEnv(gym.Env):
         done = bool(done)
         reward = 1.0
         # print("state=",self.state)
-        return np.array(self.state), reward, done, {}
+        return self.get_state(), reward, done, {}
 
     def reset(self):
-        #    print("-----------reset simulation---------------")
+        # Create client if it doesnt exist
         if self._physics_client_id < 0:
             if self._renders:
                 self._p = bc.BulletClient(connection_mode=p2.GUI)
@@ -114,24 +118,28 @@ class CartPoleBulletEnv(gym.Env):
             p = self._p
             p.resetSimulation()
             self.cartpole = p.loadURDF("models/cartpole.urdf")
-            # TODO: verify following isn't needed, leaving just incase it is
-            #p.changeDynamics(self.cartpole, -1, linearDamping=0, angularDamping=0)
-            #p.changeDynamics(self.cartpole, 0, linearDamping=0, angularDamping=0)
-            targetPosition = [0, 0, 0, 1]
-            p.setJointMotorControlMultiDof(self.cartpole, 1, p.POSITION_CONTROL, targetPosition,
+            p.setJointMotorControlMultiDof(self.cartpole, 1, p.POSITION_CONTROL, targetPosition=[0, 0, 0, 1],
                                            targetVelocity=[0, 0, 0], positionGain=0, velocityGain=1,
                                            force=[0, 0, 0])
 
             p.setGravity(0, 0, -9.8)
             p.setTimeStep(self.timeStep)
             p.setRealTimeSimulation(0)
+
+        # Reset client params now that it is created
         p = self._p
         randstate = list(self.np_random.uniform(low=-0.05, high=0.05, size=(6,)))
         p.resetJointState(self.cartpole, 0, randstate[0], randstate[1])
 
         p.resetJointStateMultiDof(self.cartpole, 1, targetValue=randstate[2:5] + [1], targetVelocity=[0, 0, 0])
-        self.state = p.getJointState(self.cartpole, 1)[0:2] + p.getJointState(self.cartpole, 0)[0:2]
-        return np.array(self.state)
+        return self.get_state()
+
+    # Unified function for getting state information
+    def get_state(self):
+        cart_json = self.state_to_json(self.cartpole, 0)
+        pole_json = self.state_to_json(self.cartpole, 1)
+
+        return {'cart': cart_json, 'pole': pole_json}
 
     def render(self, mode='human', close=False):
         if mode == "human":
@@ -182,6 +190,45 @@ class CartPoleBulletEnv(gym.Env):
             roll / 2)
 
         return (qx, qy, qz, qw)
+
+    # Return state in json format
+    def state_to_json(self, body_id, joint_id):
+
+        p = self._p
+        state = dict()
+        round_amount = 6
+
+        # Position and orientation, the other two not used
+        pos, vel, jRF, aJMT = p.getJointStateMultiDof(body_id, joint_id)
+
+        print(joint_id)
+        print(p.getJointState(body_id, joint_id))
+
+        return {}
+
+        # Position
+        if len(pos) == 4:
+            state['x_quaternion'] = round(pos[0], round_amount)
+            state['y_quaternion'] = round(pos[1], round_amount)
+            state['z_quaternion'] = round(pos[2], round_amount)
+            state['w_quaternion'] = round(pos[3], round_amount)
+        else:
+            state['x_position'] = round(pos[0], round_amount)
+            state['y_position'] = round(pos[1], round_amount)
+            if len(pos) == 3:
+                state['z_position'] = round(pos[2], round_amount)
+            else:
+                state['z_position'] = 0.0
+
+        # Velocity
+        state['x_velocity'] = round(vel[0], round_amount)
+        state['y_velocity'] = round(vel[1], round_amount)
+        if len(pos) == 3:
+            state['z_velocity'] = round(vel[2], round_amount)
+        else:
+            state['z_velocity'] = 0.0
+
+        return state
 
     def close(self):
         if self._physics_client_id >= 0:

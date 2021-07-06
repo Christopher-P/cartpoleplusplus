@@ -46,12 +46,10 @@
     </inertial>
   </link>
 
-  <joint name="ground_to_cart" type="planar">
-    <axis xyz="0 0 1"/>
+  <joint name="ground_to_cart" type="floating">
     <origin xyz="0.0 0.0 0.0"/>
     <parent link="ground"/>
     <child link="cart"/>
-    <limit effort="1000.0" lower="-15" upper="15" velocity="5"/>
   </joint>
 
   <link name="pole">
