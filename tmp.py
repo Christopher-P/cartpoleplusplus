@@ -94,6 +94,7 @@ class CartPoleBulletEnv(gym.Env):
         p.applyExternalForce(self.cartpole, 0, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
         p.stepSimulation()
 
+        '''
         self.state = p.getJointState(self.cartpole, 1)[0:2] + p.getJointState(self.cartpole, 0)[0:2]
         theta, theta_dot, x, x_dot = self.state
 
@@ -102,6 +103,8 @@ class CartPoleBulletEnv(gym.Env):
                or theta < -self.theta_threshold_radians \
                or theta > self.theta_threshold_radians
         done = bool(done)
+        '''
+        done = False
         reward = 1.0
         # print("state=",self.state)
         return self.get_state(), reward, done, {}
@@ -117,8 +120,9 @@ class CartPoleBulletEnv(gym.Env):
 
             p = self._p
             p.resetSimulation()
+            self.ground = p.loadURDF("models/ground.urdf")
             self.cartpole = p.loadURDF("models/cartpole.urdf")
-            p.setJointMotorControlMultiDof(self.cartpole, 1, p.POSITION_CONTROL, targetPosition=[0, 0, 0, 1],
+            p.setJointMotorControlMultiDof(self.cartpole, 0, p.POSITION_CONTROL, targetPosition=[0, 0, 0, 1],
                                            targetVelocity=[0, 0, 0], positionGain=0, velocityGain=1,
                                            force=[0, 0, 0])
 
@@ -129,17 +133,50 @@ class CartPoleBulletEnv(gym.Env):
         # Reset client params now that it is created
         p = self._p
         randstate = list(self.np_random.uniform(low=-0.05, high=0.05, size=(6,)))
-        p.resetJointState(self.cartpole, 0, randstate[0], randstate[1])
-
-        p.resetJointStateMultiDof(self.cartpole, 1, targetValue=randstate[2:5] + [1], targetVelocity=[0, 0, 0])
+        p.resetJointStateMultiDof(self.cartpole, 0, targetValue=randstate[2:5] + [1], targetVelocity=[0, 0, 0])
         return self.get_state()
 
     # Unified function for getting state information
     def get_state(self):
-        cart_json = self.state_to_json(self.cartpole, 0)
-        pole_json = self.state_to_json(self.cartpole, 1)
+        cart_json = self.get_object_json(self.cartpole)
+        print(cart_json)
+        pole_json = self.state_to_json(self.cartpole, 0)
 
         return {'cart': cart_json, 'pole': pole_json}
+
+    def get_object_json(self, object_id):
+        # Internal vars
+        state = {}
+        round_amount = 6
+
+        # Handle pos, ori
+        pos, ori = self._p.getBasePositionAndOrientation(object_id)
+
+        state['x_position'] = round(pos[0], round_amount)
+        state['y_position'] = round(pos[1], round_amount)
+        state['z_position'] = round(pos[2], round_amount)
+
+        state['x_quaternion'] = round(ori[0], round_amount)
+        state['y_quaternion'] = round(ori[1], round_amount)
+        state['z_quaternion'] = round(ori[2], round_amount)
+        state['w_quaternion'] = round(ori[3], round_amount)
+
+        # Handle velocity
+        vel, ang = self._p.getBaseVelocity(object_id)
+        state['x_velocity'] = round(vel[0], round_amount)
+        state['y_velocity'] = round(vel[1], round_amount)
+        state['z_velocity'] = round(vel[2], round_amount)
+
+        state['x_angular_velocity'] = round(ang[0], round_amount)
+        state['y_angular_velocity'] = round(ang[1], round_amount)
+        state['z_angular_velocity'] = round(ang[2], round_amount)
+        state['w_angular_velocity'] = round(ang[2], round_amount)
+
+        return state
+
+    # TODO: Implement
+    def get_joint_json(self):
+        return None
 
     def render(self, mode='human', close=False):
         if mode == "human":
@@ -200,11 +237,6 @@ class CartPoleBulletEnv(gym.Env):
 
         # Position and orientation, the other two not used
         pos, vel, jRF, aJMT = p.getJointStateMultiDof(body_id, joint_id)
-
-        print(joint_id)
-        print(p.getJointState(body_id, joint_id))
-
-        return {}
 
         # Position
         if len(pos) == 4:
