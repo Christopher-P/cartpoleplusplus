@@ -35,13 +35,12 @@ class CartPoleBulletEnv(gym.Env):
         self._physics_client_id = -1
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 0.4  # 2.4
-        high = np.array([
-            self.x_threshold * 2,
-            np.finfo(np.float32).max, self.theta_threshold_radians * 2,
-            np.finfo(np.float32).max
-        ])
+        high = np.array([self.x_threshold * 2, np.finfo(np.float32).max,
+                         self.theta_threshold_radians * 2, np.finfo(np.float32).max])
 
+        # Environmental params
         self.force_mag = 10
+        self.timeStep = 0.02
 
         if self._discrete_actions:
             self.action_space = spaces.Discrete(5)
@@ -56,6 +55,8 @@ class CartPoleBulletEnv(gym.Env):
         #    self.reset()
         self.viewer = None
         self._configure()
+
+        return None
 
     def _configure(self, display=None):
         self.display = display
@@ -113,17 +114,9 @@ class CartPoleBulletEnv(gym.Env):
             p = self._p
             p.resetSimulation()
             self.cartpole = p.loadURDF("models/cartpole.urdf")
-            p.changeDynamics(self.cartpole, -1, linearDamping=0, angularDamping=0)
-            p.changeDynamics(self.cartpole, 0, linearDamping=0, angularDamping=0)
-            # p.changeDynamics(self.cartpole, 1, linearDamping=0, angularDamping=0)
-            # p.changeDynamics(self.cartpole, 2, linearDamping=0, angularDamping=0)
-            self.timeStep = 0.02
-            # This one for conitnous
-            # p.setJointMotorControl2(self.cartpole, 1, p.VELOCITY_CONTROL, force=0)
-            # p.setJointMotorControl2(self.cartpole, 2, p.VELOCITY_CONTROL, force=0)
-            # This one for spherical
-            #p.setJointMotorControl2(self.cartpole, 0, p.VELOCITY_CONTROL, force=0)
-
+            # TODO: verify following isn't needed, leaving just incase it is
+            #p.changeDynamics(self.cartpole, -1, linearDamping=0, angularDamping=0)
+            #p.changeDynamics(self.cartpole, 0, linearDamping=0, angularDamping=0)
             targetPosition = [0, 0, 0, 1]
             p.setJointMotorControlMultiDof(self.cartpole, 1, p.POSITION_CONTROL, targetPosition,
                                            targetVelocity=[0, 0, 0], positionGain=0, velocityGain=1,
@@ -133,13 +126,11 @@ class CartPoleBulletEnv(gym.Env):
             p.setTimeStep(self.timeStep)
             p.setRealTimeSimulation(0)
         p = self._p
-        randstate = self.np_random.uniform(low=-0.05, high=0.05, size=(6,))
-        p.resetJointState(self.cartpole, 1, randstate[0], randstate[1])
-        p.resetJointState(self.cartpole, 0, randstate[2], randstate[3])
-        # p.resetJointState(self.cartpole, 2, randstate[4]*5, randstate[5])
-        # print("randstate=",randstate)
+        randstate = list(self.np_random.uniform(low=-0.05, high=0.05, size=(6,)))
+        p.resetJointState(self.cartpole, 0, randstate[0], randstate[1])
+
+        p.resetJointStateMultiDof(self.cartpole, 1, targetValue=randstate[2:5] + [1], targetVelocity=[0, 0, 0])
         self.state = p.getJointState(self.cartpole, 1)[0:2] + p.getJointState(self.cartpole, 0)[0:2]
-        # print("self.state=", self.state)
         return np.array(self.state)
 
     def render(self, mode='human', close=False):
@@ -179,6 +170,18 @@ class CartPoleBulletEnv(gym.Env):
 
     def configure(self, args):
         pass
+
+    def eulerToQuaternion(self, yaw, pitch, roll):
+        qx = np.sin(yaw / 2) * np.sin(pitch / 2) * np.cos(roll / 2) + np.cos(yaw / 2) * np.cos(pitch / 2) * np.sin(
+            roll / 2)
+        qy = np.sin(yaw / 2) * np.cos(pitch / 2) * np.cos(roll / 2) + np.cos(yaw / 2) * np.sin(pitch / 2) * np.sin(
+            roll / 2)
+        qz = np.cos(yaw / 2) * np.sin(pitch / 2) * np.cos(roll / 2) - np.sin(yaw / 2) * np.cos(pitch / 2) * np.sin(
+            roll / 2)
+        qw = np.cos(yaw / 2) * np.cos(pitch / 2) * np.cos(roll / 2) - np.sin(yaw / 2) * np.sin(pitch / 2) * np.sin(
+            roll / 2)
+
+        return (qx, qy, qz, qw)
 
     def close(self):
         if self._physics_client_id >= 0:
