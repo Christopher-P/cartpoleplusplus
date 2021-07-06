@@ -54,36 +54,6 @@
     <limit effort="1000.0" lower="-15" upper="15" velocity="5"/>
   </joint>
 
-  <link name="smol">
-    <visual>
-      <geometry>
-        <box size="0.0 0.0 0.0"/>
-      </geometry>
-      <origin rpy="0 0 0" xyz="0 0 0.5"/>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
-    </visual>
-    <inertial>
-    <origin xyz="0 0 0.5"/>
-      <mass value="10"/>
-      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
-    </inertial>
-     <collision>
-      <geometry>
-        <box size="0.0 0.0 0.0"/>
-      </geometry>
-      <origin rpy="0 0 0" xyz="0 0 0.5"/>
-    </collision>
-  </link>
-
-  <joint name="cart_to_smol" type="continuous">
-    <axis xyz="0 1 0"/>
-    <origin xyz="0.0 0.0 0.0"/>
-    <parent link="cart"/>
-    <child link="smol"/>
-  </joint>
-
   <link name="pole">
     <visual>
       <geometry>
@@ -107,10 +77,9 @@
     </collision>
   </link>
 
-  <joint name="pole_to_smol" type="continuous">
-    <axis xyz="1 0 0"/>
+  <joint name="pole_to_cart" type="spherical">
     <origin xyz="0.0 0.0 0.0"/>
-    <parent link="smol"/>
+    <parent link="cart"/>
     <child link="pole"/>
   </joint>
 

@@ -115,14 +115,20 @@ class CartPoleBulletEnv(gym.Env):
             self.cartpole = p.loadURDF("models/cartpole.urdf")
             p.changeDynamics(self.cartpole, -1, linearDamping=0, angularDamping=0)
             p.changeDynamics(self.cartpole, 0, linearDamping=0, angularDamping=0)
-            p.changeDynamics(self.cartpole, 1, linearDamping=0, angularDamping=0)
-            p.changeDynamics(self.cartpole, 2, linearDamping=0, angularDamping=0)
+            # p.changeDynamics(self.cartpole, 1, linearDamping=0, angularDamping=0)
+            # p.changeDynamics(self.cartpole, 2, linearDamping=0, angularDamping=0)
             self.timeStep = 0.02
             # This one for conitnous
-            p.setJointMotorControl2(self.cartpole, 1, p.VELOCITY_CONTROL, force=0)
-            p.setJointMotorControl2(self.cartpole, 2, p.VELOCITY_CONTROL, force=0)
+            # p.setJointMotorControl2(self.cartpole, 1, p.VELOCITY_CONTROL, force=0)
+            # p.setJointMotorControl2(self.cartpole, 2, p.VELOCITY_CONTROL, force=0)
             # This one for spherical
             #p.setJointMotorControl2(self.cartpole, 0, p.VELOCITY_CONTROL, force=0)
+
+            targetPosition = [0, 0, 0, 1]
+            p.setJointMotorControlMultiDof(self.cartpole, 1, p.POSITION_CONTROL, targetPosition,
+                                           targetVelocity=[0, 0, 0], positionGain=0, velocityGain=1,
+                                           force=[0, 0, 0])
+
             p.setGravity(0, 0, -9.8)
             p.setTimeStep(self.timeStep)
             p.setRealTimeSimulation(0)
@@ -130,7 +136,7 @@ class CartPoleBulletEnv(gym.Env):
         randstate = self.np_random.uniform(low=-0.05, high=0.05, size=(6,))
         p.resetJointState(self.cartpole, 1, randstate[0], randstate[1])
         p.resetJointState(self.cartpole, 0, randstate[2], randstate[3])
-        p.resetJointState(self.cartpole, 2, randstate[4]*5, randstate[5])
+        # p.resetJointState(self.cartpole, 2, randstate[4]*5, randstate[5])
         # print("randstate=",randstate)
         self.state = p.getJointState(self.cartpole, 1)[0:2] + p.getJointState(self.cartpole, 0)[0:2]
         # print("self.state=", self.state)
