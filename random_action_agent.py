@@ -3,10 +3,11 @@ import argparse
 import random
 import time
 
-#import cartpoleplusplus
-from tmp import CartPoleBulletEnv
+from cartpoleplusplus import CartPoleBulletEnv
 
-env = CartPoleBulletEnv(renders=True)
+# Params
+use_gui = True
+env = CartPoleBulletEnv(renders=use_gui)
 
 # Number of episodes
 nb_episodes = 200
