@@ -18,7 +18,7 @@ for _ in range(nb_episodes):
     total_reward = 0
     steps = 0
     while True:
-        action = 0#env.action_space.sample()
+        action = 2# env.action_space.sample()
         _state, reward, done, info = env.step(action)
         print(_state)
         steps += 1

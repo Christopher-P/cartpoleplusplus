@@ -39,7 +39,7 @@ class CartPoleBulletEnv(gym.Env):
                          self.theta_threshold_radians * 2, np.finfo(np.float32).max])
 
         # Environmental params
-        self.force_mag = 10
+        self.force_mag = 15
         self.timeStep = 0.02
 
         # Object definitions
@@ -76,7 +76,6 @@ class CartPoleBulletEnv(gym.Env):
         else:
             force = action[0]
 
-        #p.setJointMotorControl2(self.cartpole, 0, p.TORQUE_CONTROL, force=force)
         # based on action decide the x and y forces
         fx = fy = 0
         if action == 0:
@@ -91,19 +90,9 @@ class CartPoleBulletEnv(gym.Env):
             fy = -self.force_mag
         else:
             raise Exception("unknown discrete action [%s]" % action)
-        p.applyExternalForce(self.cartpole, 0, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
+        p.applyExternalForce(self.cartpole, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
         p.stepSimulation()
 
-        '''
-        self.state = p.getJointState(self.cartpole, 1)[0:2] + p.getJointState(self.cartpole, 0)[0:2]
-        theta, theta_dot, x, x_dot = self.state
-
-        done = x < -self.x_threshold \
-               or x > self.x_threshold \
-               or theta < -self.theta_threshold_radians \
-               or theta > self.theta_threshold_radians
-        done = bool(done)
-        '''
         done = False
         reward = 1.0
         # print("state=",self.state)
@@ -176,6 +165,7 @@ class CartPoleBulletEnv(gym.Env):
 
     # TODO: Implement
     def get_joint_json(self):
+
         return None
 
     def render(self, mode='human', close=False):
