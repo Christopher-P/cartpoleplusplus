@@ -44,6 +44,9 @@ class CartPoleBulletEnv(gym.Env):
 
         # Object definitions
         self.cartpole = None
+        self.ground = None
+        self.blocks = None
+        self.walls = None
         self.state = None
 
         if self._discrete_actions:
@@ -101,29 +104,57 @@ class CartPoleBulletEnv(gym.Env):
     def reset(self):
         # Create client if it doesnt exist
         if self._physics_client_id < 0:
-            if self._renders:
-                self._p = bc.BulletClient(connection_mode=p2.GUI)
-            else:
-                self._p = bc.BulletClient()
-            self._physics_client_id = self._p._client
-
-            p = self._p
-            p.resetSimulation()
-            self.ground = p.loadURDF("models/ground.urdf")
-            self.cartpole = p.loadURDF("models/cartpole.urdf")
-            p.setJointMotorControlMultiDof(self.cartpole, 0, p.POSITION_CONTROL, targetPosition=[0, 0, 0, 1],
-                                           targetVelocity=[0, 0, 0], positionGain=0, velocityGain=1,
-                                           force=[0, 0, 0])
-
-            p.setGravity(0, 0, -9.8)
-            p.setTimeStep(self.timeStep)
-            p.setRealTimeSimulation(0)
+            self.generate_world()
 
         # Reset client params now that it is created
         p = self._p
         randstate = list(self.np_random.uniform(low=-0.05, high=0.05, size=(6,)))
         p.resetJointStateMultiDof(self.cartpole, 0, targetValue=randstate[2:5] + [1], targetVelocity=[0, 0, 0])
         return self.get_state()
+
+    # Used to generate the initial world state
+    def generate_world(self):
+        # Create bullet physics client
+        if self._renders:
+            self._p = bc.BulletClient(connection_mode=p2.GUI)
+        else:
+            self._p = bc.BulletClient()
+        self._physics_client_id = self._p._client
+
+        # Load world simulation
+        p = self._p
+        p.resetSimulation()
+        p.setGravity(0, 0, -9.8)
+        p.setTimeStep(self.timeStep)
+        p.setRealTimeSimulation(0)
+
+        # Load world objects
+        self.ground = p.loadURDF("models/ground.urdf")
+        self.cartpole = p.loadURDF("models/cartpole.urdf")
+        self.walls = p.loadURDF("models/walls.urdf")
+
+        nb_blocks = 4
+        self.blocks = [None] * nb_blocks
+        for i in range(nb_blocks):
+            self.blocks[i] = p.loadURDF("models/block.urdf")
+
+        # This big line sets the spehrical joint on the pole to loose
+        p.setJointMotorControlMultiDof(self.cartpole, 0, p.POSITION_CONTROL, targetPosition=[0, 0, 0, 1],
+                                       targetVelocity=[0, 0, 0], positionGain=0, velocityGain=1,
+                                       force=[0, 0, 0])
+
+        # Set blocks to not overlap
+        collide = False
+        for i in self.blocks:
+            for j in self.blocks:
+                # Turn off block collisions
+                p.setCollisionFilterPair(j, i, -1, -1, collide)
+
+            # Turn of cart and pole collision with blocks
+            p.setCollisionFilterPair(self.cartpole, i, -1, -1, collide)
+            p.setCollisionFilterPair(self.cartpole, i, 0, -1, collide)
+
+        return None
 
     # Unified function for getting state information
     def get_state(self):
