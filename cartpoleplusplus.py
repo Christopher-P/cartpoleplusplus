@@ -139,18 +139,18 @@ class CartPoleBulletEnv(gym.Env):
             self.blocks[i] = p.loadURDF("models/block.urdf")
 
         # Set 0 friction on ground
-        p.changeDynamics(self.ground, -1, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
+        p.changeDynamics(self.ground, -1, restitution=0.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
 
         # Set walls to be bouncy
-        p.changeDynamics(self.walls, -1, restitution=0.999, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
-        p.changeDynamics(self.walls, 0, restitution=0.999, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
-        p.changeDynamics(self.walls, 1, restitution=0.999, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
-        p.changeDynamics(self.walls, 2, restitution=0.999, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
-        p.changeDynamics(self.walls, 3, restitution=0.999, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
+        p.changeDynamics(self.walls, -1, restitution=1.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
+        p.changeDynamics(self.walls, 0, restitution=1.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
+        p.changeDynamics(self.walls, 1, restitution=1.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
+        p.changeDynamics(self.walls, 2, restitution=1.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
+        p.changeDynamics(self.walls, 3, restitution=1.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
 
         # Set blocks to be bouncy
         for i in self.blocks:
-            p.changeDynamics(i, -1, restitution=0.999)
+            p.changeDynamics(i, -1, restitution=1.0)
 
         # This big line sets the spehrical joint on the pole to loose
         p.setJointMotorControlMultiDof(self.cartpole, 0, p.POSITION_CONTROL, targetPosition=[0, 0, 0, 1],
@@ -173,7 +173,7 @@ class CartPoleBulletEnv(gym.Env):
         cart_pos, _ = p.getBasePositionAndOrientation(self.cartpole)
         cart_pos = np.asarray(cart_pos)
         for i in self.blocks:
-            pos = np.asarray(list(self.np_random.uniform(low=-4.5, high=4.5, size=(2,))) + [0.01])
+            pos = np.asarray(list(self.np_random.uniform(low=-4.5, high=4.5, size=(2,))) + [0.05])
             while np.linalg.norm(cart_pos - pos) < min_dist:
                 pos = np.asarray(list(self.np_random.uniform(low=-9.0, high=9.0, size=(2,))) + [0.01])
             p.resetBasePositionAndOrientation(i, pos, [0,0,0,1])

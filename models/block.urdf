@@ -4,7 +4,7 @@
     <link name="block">
         <visual>
             <geometry>
-                <cylinder length="0.1" radius="0.25"/>
+                <cylinder length="0.1" radius="0.5"/>
             </geometry>
             <origin xyz="0 0 0.05"/>
             <material name="blue">
