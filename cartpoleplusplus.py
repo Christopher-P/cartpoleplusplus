@@ -175,8 +175,8 @@ class CartPoleBulletEnv(gym.Env):
         for i in self.blocks:
             pos = np.asarray(list(self.np_random.uniform(low=-4.5, high=4.5, size=(2,))) + [0.05])
             while np.linalg.norm(cart_pos - pos) < min_dist:
-                pos = np.asarray(list(self.np_random.uniform(low=-9.0, high=9.0, size=(2,))) + [0.01])
-            p.resetBasePositionAndOrientation(i, pos, [0,0,0,1])
+                pos = np.asarray(list(self.np_random.uniform(low=-8.0, high=8.0, size=(2,))) + [0.01])
+            p.resetBasePositionAndOrientation(i, pos, [0, 0, 0, 1])
 
         # Set block velocities
         for i in self.blocks:
