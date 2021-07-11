@@ -95,10 +95,8 @@ class CartPoleBulletEnv(gym.Env):
         if self._physics_client_id < 0:
             self.generate_world()
 
-        # Reset client params now that it is created
-        p = self._p
-        randstate = list(self.np_random.uniform(low=-0.05, high=0.05, size=(6,)))
-        p.resetJointStateMultiDof(self.cartpole, 0, targetValue=randstate[2:5] + [1], targetVelocity=[0, 0, 0])
+        self.reset_world()
+
         return self.get_state()
 
     # Used to generate the initial world state
@@ -155,6 +153,26 @@ class CartPoleBulletEnv(gym.Env):
             # Turn of cart and pole collision with blocks
             p.setCollisionFilterPair(self.cartpole, i, -1, -1, collide)
             p.setCollisionFilterPair(self.cartpole, i, 0, -1, collide)
+
+        return None
+
+    def reset_world(self):
+        # Reset world (assume is created)
+        p = self._p
+
+        # Reset cart
+        randstate = list(self.np_random.uniform(low=-0.05, high=0.05, size=(6,)))
+        cart_pos = randstate[0:2] + [0]
+        cart_ori = [0, 0, 0, 1]
+        p.resetBasePositionAndOrientation(self.cartpole, cart_pos, cart_ori)
+
+        # Reset pole
+        randstate = list(self.np_random.uniform(low=-0.05, high=0.05, size=(6,)))
+        pole_pos = randstate[0:3] + [1]
+        # zero so it doesnt spin like a top :)
+        pole_ori = list(randstate[3:5]) + [0]
+        pole_ori = self.eulerToQuaternion(*pole_ori)
+        p.resetJointStateMultiDof(self.cartpole, 0, targetValue=pole_pos, targetVelocity=pole_ori)
 
         # Set block posistions
         min_dist = 1
