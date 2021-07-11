@@ -98,7 +98,6 @@ class CartPoleBulletEnv(gym.Env):
 
         done = False
         reward = 1.0
-        # print("state=",self.state)
         return self.get_state(), reward, done, {}
 
     def reset(self):
@@ -186,11 +185,15 @@ class CartPoleBulletEnv(gym.Env):
 
     # Unified function for getting state information
     def get_state(self):
-        cart_json = self.get_object_json(self.cartpole)
-        print(cart_json)
-        pole_json = self.state_to_json(self.cartpole, 0)
+        world_state = dict()
+        world_state['cart'] = self.get_object_json(self.cartpole)
+        world_state['pole'] = self.get_pole_json(self.cartpole)
 
-        return {'cart': cart_json, 'pole': pole_json}
+        world_state['blocks'] = []
+        for ind, val in enumerate(self.blocks):
+            world_state['blocks'].append(self.get_object_json(val))
+
+        return world_state
 
     def get_object_json(self, object_id):
         # Internal vars
@@ -204,10 +207,11 @@ class CartPoleBulletEnv(gym.Env):
         state['y_position'] = round(pos[1], round_amount)
         state['z_position'] = round(pos[2], round_amount)
 
-        state['x_quaternion'] = round(ori[0], round_amount)
-        state['y_quaternion'] = round(ori[1], round_amount)
-        state['z_quaternion'] = round(ori[2], round_amount)
-        state['w_quaternion'] = round(ori[3], round_amount)
+        # Orientation disabled since everything is a cylender now
+        # state['x_quaternion'] = round(ori[0], round_amount)
+        # state['y_quaternion'] = round(ori[1], round_amount)
+        # state['z_quaternion'] = round(ori[2], round_amount)
+        # state['w_quaternion'] = round(ori[3], round_amount)
 
         # Handle velocity
         vel, ang = self._p.getBaseVelocity(object_id)
@@ -215,17 +219,37 @@ class CartPoleBulletEnv(gym.Env):
         state['y_velocity'] = round(vel[1], round_amount)
         state['z_velocity'] = round(vel[2], round_amount)
 
-        state['x_angular_velocity'] = round(ang[0], round_amount)
-        state['y_angular_velocity'] = round(ang[1], round_amount)
-        state['z_angular_velocity'] = round(ang[2], round_amount)
-        state['w_angular_velocity'] = round(ang[2], round_amount)
+        # angular velocity disabled since everything is a cylender now
+        # state['x_angular_velocity'] = round(ang[0], round_amount)
+        # state['y_angular_velocity'] = round(ang[1], round_amount)
+        # state['z_angular_velocity'] = round(ang[2], round_amount)
+        # state['w_angular_velocity'] = round(ang[2], round_amount)
 
         return state
 
-    # TODO: Implement
-    def get_joint_json(self):
+    # Specific function for getting pole info
+    def get_pole_json(self, body_id, joint_id=0):
+        p = self._p
+        state = dict()
+        round_amount = 6
 
-        return None
+        # Position and orientation, the other two not used
+        pos, vel, jRF, aJMT = p.getJointStateMultiDof(body_id, joint_id)
+
+        # Convert quats to eulers
+        eulers = self.quaternion_to_euler(*pos)
+
+        # Position
+        state['x_position'] = round(eulers[0], round_amount)
+        state['y_position'] = round(eulers[1], round_amount)
+        state['z_position'] = round(eulers[2], round_amount)
+
+        # Velocity
+        state['x_velocity'] = round(vel[0], round_amount)
+        state['y_velocity'] = round(vel[1], round_amount)
+        state['z_velocity'] = round(vel[2], round_amount)
+
+        return state
 
     def render(self, mode='human', close=False):
         if mode == "human":
@@ -277,39 +301,26 @@ class CartPoleBulletEnv(gym.Env):
 
         return (qx, qy, qz, qw)
 
-    # Return state in json format
-    def state_to_json(self, body_id, joint_id):
+    def quaternion_to_euler(self, w, x, y, z):
+        ysqr = y * y
 
-        p = self._p
-        state = dict()
-        round_amount = 6
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + ysqr)
+        X = np.degrees(np.arctan2(t0, t1))
 
-        # Position and orientation, the other two not used
-        pos, vel, jRF, aJMT = p.getJointStateMultiDof(body_id, joint_id)
+        t2 = +2.0 * (w * y - z * x)
+        t2 = np.where(t2 > +1.0, +1.0, t2)
+        # t2 = +1.0 if t2 > +1.0 else t2
 
-        # Position
-        if len(pos) == 4:
-            state['x_quaternion'] = round(pos[0], round_amount)
-            state['y_quaternion'] = round(pos[1], round_amount)
-            state['z_quaternion'] = round(pos[2], round_amount)
-            state['w_quaternion'] = round(pos[3], round_amount)
-        else:
-            state['x_position'] = round(pos[0], round_amount)
-            state['y_position'] = round(pos[1], round_amount)
-            if len(pos) == 3:
-                state['z_position'] = round(pos[2], round_amount)
-            else:
-                state['z_position'] = 0.0
+        t2 = np.where(t2 < -1.0, -1.0, t2)
+        # t2 = -1.0 if t2 < -1.0 else t2
+        Y = np.degrees(np.arcsin(t2))
 
-        # Velocity
-        state['x_velocity'] = round(vel[0], round_amount)
-        state['y_velocity'] = round(vel[1], round_amount)
-        if len(pos) == 3:
-            state['z_velocity'] = round(vel[2], round_amount)
-        else:
-            state['z_velocity'] = 0.0
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (ysqr + z * z)
+        Z = np.degrees(np.arctan2(t3, t4))
 
-        return state
+        return (X, Y, Z)
 
     def close(self):
         if self._physics_client_id >= 0:
