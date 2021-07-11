@@ -2,25 +2,14 @@
 Classic cart-pole system implemented by Rich Sutton et al.
 Copied from http://incompleteideas.net/book/code/pole.c
 """
-import os, inspect
 
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(os.path.dirname(currentdir))
-os.sys.path.insert(0, parentdir)
-
-import logging
 import math
 import gym
 from gym import spaces
 from gym.utils import seeding
 import numpy as np
-import time
-import subprocess
 import pybullet as p2
 from pybullet_utils import bullet_client as bc
-from pkg_resources import parse_version
-
-logger = logging.getLogger(__name__)
 
 
 class CartPoleBulletEnv(gym.Env):
@@ -41,6 +30,7 @@ class CartPoleBulletEnv(gym.Env):
         # Environmental params
         self.force_mag = 15
         self.timeStep = 0.02
+        self.nb_blocks = 4
 
         # Object definitions
         self.cartpole = None
@@ -132,9 +122,8 @@ class CartPoleBulletEnv(gym.Env):
         self.cartpole = p.loadURDF("models/cartpole.urdf")
         self.walls = p.loadURDF("models/walls.urdf")
 
-        nb_blocks = 4
-        self.blocks = [None] * nb_blocks
-        for i in range(nb_blocks):
+        self.blocks = [None] * self.nb_blocks
+        for i in range(self.nb_blocks):
             self.blocks[i] = p.loadURDF("models/block.urdf")
 
         # Set 0 friction on ground
@@ -192,6 +181,15 @@ class CartPoleBulletEnv(gym.Env):
         world_state['blocks'] = []
         for ind, val in enumerate(self.blocks):
             world_state['blocks'].append(self.get_object_json(val))
+
+        # Hardcoded cause I don't know how to get the info :(
+        world_state['walls'] = []
+        world_state['walls'].append(([-5, -5], [-5, 5]))
+        world_state['walls'].append(([-5, 5], [5, 5]))
+        world_state['walls'].append(([5, 5], [5, -5]))
+        world_state['walls'].append(([5, -5], [-5, -5]))
+
+        world_state['ground'] = {'x_position': 0, 'y_position': 0, 'x_length': 10, 'y_length': 10}
 
         return world_state
 
