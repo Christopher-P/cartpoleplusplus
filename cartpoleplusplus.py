@@ -29,8 +29,9 @@ class CartPoleBulletEnv(gym.Env):
 
         # Environmental params
         self.force_mag = 15
-        self.timeStep = 0.02
+        self.timeStep = 1.0/50.0
         self.nb_blocks = 4
+        self.yaw_limit = 170
 
         # Object definitions
         self.cartpole = None
@@ -49,7 +50,6 @@ class CartPoleBulletEnv(gym.Env):
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 
         self.seed()
-        #    self.reset()
         self.viewer = None
         self._configure()
 
@@ -86,9 +86,24 @@ class CartPoleBulletEnv(gym.Env):
         p.applyExternalForce(self.cartpole, -1, (fx, fy, 0), (0, 0, 0), p.WORLD_FRAME)
         p.stepSimulation()
 
-        done = False
+        done = self.is_done()
         reward = 1.0
         return self.get_state(), reward, done, {}
+
+    # Check if is done
+    def is_done(self):
+        p = self._p
+        pos, vel, jRF, aJMT = p.getJointStateMultiDof(self.cartpole, 0)
+
+        pos = self.quaternion_to_euler(*pos)
+        print(pos)
+
+        if abs(pos[2]) < self.yaw_limit or abs(abs(pos[1]) - 180) < self.yaw_limit:
+            return True
+        else:
+            return False
+
+        return None
 
     def reset(self):
         # Create client if it doesnt exist
@@ -248,6 +263,7 @@ class CartPoleBulletEnv(gym.Env):
         p = self._p
         state = dict()
         round_amount = 6
+        use_euler = False
 
         # Position and orientation, the other two not used
         pos, vel, jRF, aJMT = p.getJointStateMultiDof(body_id, joint_id)
@@ -256,9 +272,15 @@ class CartPoleBulletEnv(gym.Env):
         eulers = self.quaternion_to_euler(*pos)
 
         # Position
-        state['x_position'] = round(eulers[0], round_amount)
-        state['y_position'] = round(eulers[1], round_amount)
-        state['z_position'] = round(eulers[2], round_amount)
+        if use_euler:
+            state['x_position'] = round(eulers[0], round_amount)
+            state['y_position'] = round(eulers[1], round_amount)
+            state['z_position'] = round(eulers[2], round_amount)
+        else:
+            state['x_quaternion'] = round(pos[0], round_amount)
+            state['y_quaternion'] = round(pos[1], round_amount)
+            state['z_quaternion'] = round(pos[2], round_amount)
+            state['w_quaternion'] = round(pos[3], round_amount)
 
         # Velocity
         state['x_velocity'] = round(vel[0], round_amount)

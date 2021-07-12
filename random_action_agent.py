@@ -17,10 +17,11 @@ for _ in range(nb_episodes):
     done = False
     total_reward = 0
     steps = 0
-    while True:
+    while not done:
         action = 0# env.action_space.sample()
-        _state, reward, done, info = env.step(action)
-        print(_state)
+        state, reward, done, info = env.step(action)
+        print('-----')
+        print(state['pole'])
         steps += 1
         total_reward += reward
         time.sleep(1/30)
