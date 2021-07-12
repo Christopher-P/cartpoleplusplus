@@ -30,13 +30,13 @@ class CartPoleBulletEnv(gym.Env):
         # Environmental params
         self.force_mag = 15
         self.timeStep = 1.0/50.0
-        self.nb_blocks = np.random.randint(4) + 1
         self.yaw_limit = 170
 
         # Object definitions
+        self.nb_blocks = None
         self.cartpole = None
         self.ground = None
-        self.blocks = None
+        self.blocks = list()
         self.walls = None
         self.state = None
 
@@ -135,9 +135,7 @@ class CartPoleBulletEnv(gym.Env):
         self.cartpole = p.loadURDF("models/cartpole.urdf")
         self.walls = p.loadURDF("models/walls.urdf")
 
-        self.blocks = [None] * self.nb_blocks
-        for i in range(self.nb_blocks):
-            self.blocks[i] = p.loadURDF("models/block.urdf")
+
 
         # Set 0 friction on ground
         p.changeDynamics(self.ground, -1, restitution=0.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
@@ -148,10 +146,6 @@ class CartPoleBulletEnv(gym.Env):
         p.changeDynamics(self.walls, 1, restitution=1.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
         p.changeDynamics(self.walls, 2, restitution=1.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
         p.changeDynamics(self.walls, 3, restitution=1.0, lateralFriction=0.0, rollingFriction=0.0, spinningFriction=0.0)
-
-        # Set blocks to be bouncy
-        for i in self.blocks:
-            p.changeDynamics(i, -1, restitution=1.0)
 
         # This big line sets the spehrical joint on the pole to loose
         p.setJointMotorControlMultiDof(self.cartpole, 0, p.POSITION_CONTROL, targetPosition=[0, 0, 0, 1],
@@ -177,6 +171,20 @@ class CartPoleBulletEnv(gym.Env):
         pole_ori = list(randstate[3:5]) + [0]
         pole_ori = self.eulerToQuaternion(*pole_ori)
         p.resetJointStateMultiDof(self.cartpole, 0, targetValue=pole_pos, targetVelocity=pole_ori)
+
+        # Delete old blocks
+        for i in self.blocks:
+            p.removeBody(i)
+
+        # Load blocks in
+        self.nb_blocks = np.random.randint(4) + 1
+        self.blocks = [None] * self.nb_blocks
+        for i in range(self.nb_blocks):
+            self.blocks[i] = p.loadURDF("models/block.urdf")
+
+        # Set blocks to be bouncy
+        for i in self.blocks:
+            p.changeDynamics(i, -1, restitution=1.0)
 
         # Set block posistions
         min_dist = 1
