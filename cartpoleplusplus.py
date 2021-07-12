@@ -30,7 +30,7 @@ class CartPoleBulletEnv(gym.Env):
         # Environmental params
         self.force_mag = 15
         self.timeStep = 1.0/50.0
-        self.nb_blocks = 4
+        self.nb_blocks = np.random.randint(4) + 1
         self.yaw_limit = 170
 
         # Object definitions
