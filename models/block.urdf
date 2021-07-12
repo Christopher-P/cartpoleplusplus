@@ -4,18 +4,18 @@
     <link name="block">
         <visual>
             <geometry>
-                <cylinder length="0.1" radius="0.5"/>
+                <cylinder length="0.2" radius="0.5"/>
             </geometry>
-            <origin xyz="0 0 0.05"/>
+            <origin xyz="0 0 0.1"/>
             <material name="blue">
                 <color rgba="0 0 .8 1"/>
             </material>
         </visual>
         <collision>
             <geometry>
-                <cylinder length="0.1" radius="0.5"/>
+                <cylinder length="0.2" radius="0.5"/>
             </geometry>
-            <origin xyz="0 0 0.05"/>
+            <origin xyz="0 0 0.1"/>
         </collision>
         <inertial>
             <mass value="10"/>

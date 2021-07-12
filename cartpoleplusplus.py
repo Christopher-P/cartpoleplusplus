@@ -158,17 +158,6 @@ class CartPoleBulletEnv(gym.Env):
                                        targetVelocity=[0, 0, 0], positionGain=0, velocityGain=1,
                                        force=[0, 0, 0])
 
-        # Set blocks to not overlap
-        collide = False
-        for i in self.blocks:
-            for j in self.blocks:
-                # Turn off block collisions
-                p.setCollisionFilterPair(j, i, -1, -1, collide)
-
-            # Turn of cart and pole collision with blocks
-            p.setCollisionFilterPair(self.cartpole, i, -1, -1, collide)
-            p.setCollisionFilterPair(self.cartpole, i, 0, -1, collide)
-
         return None
 
     def reset_world(self):
@@ -194,9 +183,9 @@ class CartPoleBulletEnv(gym.Env):
         cart_pos, _ = p.getBasePositionAndOrientation(self.cartpole)
         cart_pos = np.asarray(cart_pos)
         for i in self.blocks:
-            pos = np.asarray(list(self.np_random.uniform(low=-4.5, high=4.5, size=(2,))) + [0.05])
+            pos = np.asarray([0, 0, 0])
             while np.linalg.norm(cart_pos - pos) < min_dist:
-                pos = np.asarray(list(self.np_random.uniform(low=-8.0, high=8.0, size=(2,))) + [0.01])
+                pos = np.asarray(list(self.np_random.uniform(low=-4.0, high=4.0, size=(2,))) + [0.05])
             p.resetBasePositionAndOrientation(i, pos, [0, 0, 0, 1])
 
         # Set block velocities
